@@ -1,6 +1,6 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, AsyncReadExt, BoxedFuture, LoadContext},
-    log::debug,
+    log::debug, math::vec2,
 };
 use thiserror::Error;
 
@@ -44,7 +44,7 @@ impl AssetLoader for SvgAssetLoader {
             debug!("Parsing SVG: {} ... Done", load_context.path().display());
 
             debug!("Tessellating SVG: {} ...", load_context.path().display());
-            let mesh = svg.tessellate();
+            let mesh = svg.tessellate(vec2(0.0, 0.0));
             debug!(
                 "Tessellating SVG: {} ... Done",
                 load_context.path().display()

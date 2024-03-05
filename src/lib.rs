@@ -15,7 +15,7 @@
 
 // rustc
 #![deny(future_incompatible, nonstandard_style)]
-#![warn(missing_docs, rust_2018_idioms, unused)]
+#![warn(missing_docs, rust_2018_idioms)]
 #![allow(elided_lifetimes_in_paths)]
 // clippy
 #![warn(

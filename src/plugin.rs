@@ -33,7 +33,11 @@ use bevy::{
 #[cfg(feature = "2d")]
 use bevy::sprite::Mesh2dHandle;
 
-use crate::{origin, render, svg::Svg};
+use crate::{
+    origin::{self, Origin, OriginState},
+    render,
+    svg::Svg,
+};
 
 /// Sets for this plugin.
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemSet)]
@@ -48,11 +52,13 @@ pub struct SvgRenderPlugin;
 impl Plugin for SvgRenderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, (origin::add_origin_state.in_set(Set::SVG),))
-            .add_systems(
-                Last,
-                (origin::apply_origin, svg_mesh_linker.in_set(Set::SVG)),
-            )
             .add_plugins(render::SvgPlugin);
+        #[cfg(feature = "2d")]
+        app.add_systems(Last, origin::apply_origin_change_2d.in_set(Set::SVG));
+        #[cfg(feature = "3d")]
+        app.add_systems(Last, origin::apply_origin_change_3d.in_set(Set::SVG));
+
+        app.add_systems(Last, svg_mesh_linker.in_set(Set::SVG));
     }
 }
 
@@ -63,6 +69,7 @@ type SvgMeshComponents = (
     &'static Handle<Svg>,
     Option<&'static mut Mesh2dHandle>,
     Option<()>,
+    &'static Origin,
 );
 #[cfg(not(feature = "2d"))]
 #[cfg(feature = "3d")]
@@ -71,6 +78,7 @@ type SvgMeshComponents = (
     &'static Handle<Svg>,
     Option<()>,
     Option<&'static mut Handle<Mesh>>,
+    &'static Origin,
 );
 #[cfg(all(feature = "2d", feature = "3d"))]
 type SvgMeshComponents = (
@@ -78,6 +86,7 @@ type SvgMeshComponents = (
     &'static Handle<Svg>,
     Option<&'static mut Mesh2dHandle>,
     Option<&'static mut Handle<Mesh>>,
+    &'static Origin,
 );
 
 /// Bevy system which queries for all [`Svg`] bundles and adds the correct [`Mesh`] to them.
@@ -87,13 +96,20 @@ fn svg_mesh_linker(
     mut meshes: ResMut<Assets<Mesh>>,
     svgs: Res<Assets<Svg>>,
     mut query: Query<SvgMeshComponents>,
-    changed_handles: Query<Entity, Or<(Changed<Handle<Svg>>, Added<Handle<Svg>>)>>,
+    changed_handles: Query<
+        Entity,
+        Or<(
+            Changed<Handle<Svg>>,
+            Added<Handle<Svg>>,
+            Changed<OriginState>,
+        )>,
+    >,
 ) {
     for event in svg_events.read() {
         match event {
             AssetEvent::Added { .. } => (),
             AssetEvent::LoadedWithDependencies { id } => {
-                for (.., _mesh_2d, _mesh_3d) in query
+                for (.., _mesh_2d, _mesh_3d, origin) in query
                     .iter_mut()
                     .filter(|(_, handle, ..)| handle.id() == *id)
                 {
@@ -103,13 +119,14 @@ fn svg_mesh_linker(
                         svg.name
                     );
                     #[cfg(feature = "2d")]
-                    _mesh_2d.map(|mut mesh| mesh.0 = svg.mesh.clone());
+                    _mesh_2d
+                        .map(|mut mesh| mesh.0 = meshes.add(svg.tessellate(origin.into())).into());
                     #[cfg(feature = "3d")]
-                    _mesh_3d.map(|mut mesh| *mesh = svg.mesh.clone());
+                    _mesh_3d.map(|mut mesh| *mesh = meshes.add(svg.tessellate(origin.into())));
                 }
             }
             AssetEvent::Modified { id } => {
-                for (.., _mesh_2d, _mesh_3d) in query
+                for (.., _mesh_2d, _mesh_3d, origin) in query
                     .iter_mut()
                     .filter(|(_, handle, ..)| handle.id() == *id)
                 {
@@ -121,7 +138,7 @@ fn svg_mesh_linker(
                     #[cfg(feature = "2d")]
                     _mesh_2d.filter(|mesh| mesh.0 != svg.mesh).map(|mut mesh| {
                         let old_mesh = mesh.0.clone();
-                        mesh.0 = svg.mesh.clone();
+                        mesh.0 = meshes.add(svg.tessellate(origin.into()));
                         meshes.remove(old_mesh);
                     });
                     #[cfg(feature = "3d")]
@@ -129,7 +146,7 @@ fn svg_mesh_linker(
                         .filter(|mesh| mesh.deref() != &svg.mesh)
                         .map(|mut mesh| {
                             let old_mesh = mesh.clone();
-                            *mesh = svg.mesh.clone();
+                            *mesh = meshes.add(svg.tessellate(origin.into()));
                             meshes.remove(old_mesh);
                         });
                 }
@@ -144,7 +161,7 @@ fn svg_mesh_linker(
 
     // Ensure all correct meshes are set for entities which have had modified handles
     for entity in changed_handles.iter() {
-        let Ok((.., handle, _mesh_2d, _mesh_3d)) = query.get_mut(entity) else {
+        let Ok((.., handle, _mesh_2d, _mesh_3d, origin)) = query.get_mut(entity) else {
             continue;
         };
         let Some(svg) = svgs.get(handle) else {
@@ -155,8 +172,8 @@ fn svg_mesh_linker(
             entity
         );
         #[cfg(feature = "2d")]
-        _mesh_2d.map(|mut mesh| mesh.0 = svg.mesh.clone());
+        _mesh_2d.map(|mut mesh| mesh.0 = meshes.add(svg.tessellate(origin.into())).into());
         #[cfg(feature = "3d")]
-        _mesh_3d.map(|mut mesh| *mesh = svg.mesh.clone());
+        _mesh_3d.map(|mut mesh| *mesh = meshes.add(svg.tessellate(origin.get_relative_offset())));
     }
 }

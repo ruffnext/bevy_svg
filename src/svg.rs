@@ -74,13 +74,14 @@ impl Svg {
     }
 
     /// Creates a bevy mesh from the SVG data.
-    pub fn tessellate(&self) -> Mesh {
+    pub fn tessellate(&self, origin: Vec2) -> Mesh {
         let buffer = tessellation::generate_buffer(
             self,
             &mut FillTessellator::new(),
             &mut StrokeTessellator::new(),
         );
-        buffer.convert()
+        let mesh = (buffer, self.size, origin).convert();
+        mesh
     }
 
     pub(crate) fn from_tree(tree: usvg::Tree) -> Svg {

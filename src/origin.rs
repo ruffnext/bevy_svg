@@ -4,15 +4,12 @@ use bevy::{
         component::Component,
         entity::Entity,
         query::{Changed, Or, With, Without},
-        system::{Commands, Query, Res},
+        system::{Commands, Query, ResMut},
     },
-    math::{Vec2, Vec3, Vec3Swizzles},
-    transform::components::{GlobalTransform, Transform},
+    math::{vec2, Vec2, Vec3},
 };
 
-#[cfg(feature = "3d")]
 use bevy::render::mesh::Mesh;
-#[cfg(feature = "2d")]
 use bevy::sprite::Mesh2dHandle;
 
 use crate::svg::Svg;
@@ -51,6 +48,22 @@ impl Origin {
             }
         }
     }
+    /// aaa
+    pub fn get_relative_offset(&self) -> Vec2 {
+        match self {
+            Origin::Custom(coord) => vec2(coord.0, coord.1),
+            _ => vec2(0.0, 0.0),
+        }
+    }
+}
+
+impl From<&Origin> for Vec2 {
+    fn from(value: &Origin) -> Self {
+        match value {
+            Origin::Custom(coord) => vec2(coord.0, coord.1),
+            _ => vec2(0.0, 0.0),
+        }
+    }
 }
 
 #[derive(Clone, Component, Copy, Debug, PartialEq)]
@@ -81,64 +94,36 @@ pub(crate) fn add_origin_state(
 }
 
 #[cfg(feature = "2d")]
-#[cfg(not(feature = "3d"))]
-type ChangedMesh = Changed<Mesh2dHandle>;
-#[cfg(not(feature = "2d"))]
-#[cfg(feature = "3d")]
-type ChangedMesh = Changed<Handle<Mesh>>;
-#[cfg(all(feature = "2d", feature = "3d"))]
-type ChangedMesh = Or<(Changed<Mesh2dHandle>, Changed<Handle<Mesh>>)>;
-
-/// Gets all SVGs with a changed origin or transform and checks if the origin offset
-/// needs to be applied.
-pub(crate) fn apply_origin(
-    svgs: Res<Assets<Svg>>,
-    mut query: Query<
-        (
-            Entity,
-            &Handle<Svg>,
-            &Origin,
-            &mut OriginState,
-            &Transform,
-            Changed<Transform>,
-            &mut GlobalTransform,
-        ),
-        Or<(Changed<Origin>, Changed<Transform>, ChangedMesh)>,
-    >,
+pub(crate) fn apply_origin_change_2d(
+    mut svgs: ResMut<Assets<Svg>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut options: Query<(&Handle<Svg>, &mut Mesh2dHandle, &Origin, &mut OriginState)>,
 ) {
-    for (
-        _,
-        svg_handle,
-        origin,
-        mut origin_state,
-        transform,
-        transform_changed,
-        mut global_transform,
-    ) in &mut query
-    {
-        if let Some(svg) = svgs.get(svg_handle) {
-            if origin_state.previous != *origin {
-                let scaled_size = svg.size * transform.scale.xy();
-                let reverse_origin_translation =
-                    origin_state.previous.compute_translation(scaled_size);
-                let origin_translation = origin.compute_translation(scaled_size);
+    for (svg, mut mesh, origin, mut prev) in options.iter_mut() {
+        if prev.previous != *origin {
+            if let Some(svg) = svgs.get_mut(svg) {
+                let new_mesh = svg.tessellate(origin.get_relative_offset());
+                let new_mesh_handle = meshes.add(new_mesh);
+                *mesh = new_mesh_handle.into();
+                prev.previous = *origin;
+            }
+        }
+    }
+}
 
-                let mut gtransf = global_transform.compute_transform();
-                gtransf.translation.x += origin_translation.x - reverse_origin_translation.x;
-                gtransf.translation.y += origin_translation.y - reverse_origin_translation.y;
-                gtransf.translation.z += origin_translation.z - reverse_origin_translation.z;
-                *global_transform = GlobalTransform::from(gtransf);
-
-                origin_state.previous = origin.clone();
-            } else if transform_changed {
-                let scaled_size = svg.size * transform.scale.xy();
-                let origin_translation = origin.compute_translation(scaled_size);
-
-                let mut gtransf = global_transform.compute_transform();
-                gtransf.translation.x += origin_translation.x;
-                gtransf.translation.y += origin_translation.y;
-                gtransf.translation.z += origin_translation.z;
-                *global_transform = GlobalTransform::from(gtransf);
+#[cfg(feature = "3d")]
+pub(crate) fn apply_origin_change_3d(
+    mut svgs: ResMut<Assets<Svg>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut options: Query<(&Handle<Svg>, &mut Handle<Mesh>, &Origin, &mut OriginState)>,
+) {
+    for (svg, mut mesh, origin, mut prev) in options.iter_mut() {
+        if prev.previous != *origin {
+            if let Some(svg) = svgs.get_mut(svg) {
+                let new_mesh = svg.tessellate(origin.get_relative_offset());
+                let new_mesh_handle = meshes.add(new_mesh);
+                *mesh = new_mesh_handle.into();
+                prev.previous = *origin;
             }
         }
     }

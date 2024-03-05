@@ -1,5 +1,5 @@
 use bevy::{
-    math::Vec3,
+    math::{vec2, Vec2, Vec3},
     render::{
         color::Color,
         mesh::{Indices, Mesh},
@@ -28,20 +28,25 @@ pub(crate) type IndexType = u32;
 /// Lyon's [`VertexBuffers`] generic data type defined for [`Vertex`].
 pub(crate) type VertexBuffers = lyon_tessellation::VertexBuffers<Vertex, IndexType>;
 
-impl Convert<Mesh> for VertexBuffers {
+impl Convert<Mesh> for (VertexBuffers, Vec2, Vec2) {
     fn convert(self) -> Mesh {
-        let mut positions = Vec::with_capacity(self.vertices.len());
-        let mut colors = Vec::with_capacity(self.vertices.len());
+        let (buffer, size, origin) = self;
+        let mut positions = Vec::with_capacity(buffer.vertices.len());
+        let mut colors = Vec::with_capacity(buffer.vertices.len());
+        let offset = vec2(-size.x * origin.x, size.y * origin.y);
 
-        for vert in self.vertices.into_iter() {
-            positions.alloc().init(vert.position);
+        for vert in buffer.vertices.into_iter() {
+            let position = vert.position;
+            positions
+                .alloc()
+                .init([position[0] + offset.x, position[1] + offset.y, position[2]]);
             colors.alloc().init(vert.color);
         }
 
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-        mesh.set_indices(Some(Indices::U32(self.indices)));
+        mesh.set_indices(Some(Indices::U32(buffer.indices)));
 
         mesh
     }
