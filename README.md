@@ -1,5 +1,12 @@
+# IMPORTANT
+
+This is a fork of [Weasy666/bevy_svg](https://github.com/Weasy666/bevy_svg) with some modifications:
+
+1. The event for handling svg's origin has been **COMPLETED** changed for fixing rotation issue. I'm **NOT** sure if such modification would cause problems 😅.
+2. Bump to Bevy 0.13.
+
+
 # bevy_svg
-[![Crates.io](https://img.shields.io/crates/v/bevy_svg.svg)](https://crates.io/crates/bevy_svg)
 [![license](https://img.shields.io/badge/license-Apache-blue.svg)](./LICENSE)
 
 For one of my personal projects i needed a way to load and display some simple SVG files/shapes in [`Bevy`],
@@ -15,9 +22,9 @@ into a vertex buffer, which lastly is convert into a [`Bevy`] mesh and drawn wit
 ## Compatibility
 | `Bevy` version | `bevy_svg` version | Branch      |
 |----------------|--------------------|-------------|
+| ![Crates.io](https://img.shields.io/badge/crates.io-v0.13.0-orange) | [![Crates.io](https://img.shields.io/badge/branch-dev-yellow)](https://github.com/ruffnext/bevy_svg/tree/dev) | [`dev`](https://github.com/ruffnext/bevy_svg) |
 | [![Crates.io](https://img.shields.io/badge/crates.io-v0.12.0-orange)](https://crates.io/crates/bevy/0.12.0) | [![Crates.io](https://img.shields.io/badge/crates.io-v0.12.0-orange)](https://crates.io/crates/bevy-svg/0.12.0) | [`bevy-0.12`](https://github.com/Weasy666/bevy_svg/tree/bevy-0.12) |
 | [![Crates.io](https://img.shields.io/badge/crates.io-v0.11.0-orange)](https://crates.io/crates/bevy/0.11.0) | [![Crates.io](https://img.shields.io/badge/crates.io-v0.11.0-orange)](https://crates.io/crates/bevy-svg/0.11.0) | [`bevy-0.11`](https://github.com/Weasy666/bevy_svg/tree/bevy-0.11) |
-| [![Crates.io](https://img.shields.io/badge/branch-main-yellow)](https://github.com/bevyengine/bevy) | [![Crates.io](https://img.shields.io/badge/branch-main-yellow)](https://github.com/Weasy666/bevy_svg/) | [`main`](https://github.com/Weasy666/bevy_svg) |
 
 <details><summary>Old versions</summary>
 

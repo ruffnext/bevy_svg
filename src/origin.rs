@@ -3,7 +3,7 @@ use bevy::{
     ecs::{
         component::Component,
         entity::Entity,
-        query::{Changed, Or, With, Without},
+        query::{Or, With, Without},
         system::{Commands, Query, ResMut},
     },
     math::{vec2, Vec2, Vec3},

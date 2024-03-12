@@ -1,6 +1,7 @@
 use bevy::{
     asset::{io::Reader, AssetLoader, AsyncReadExt, BoxedFuture, LoadContext},
-    log::debug, math::vec2,
+    log::debug,
+    math::vec2,
 };
 use thiserror::Error;
 

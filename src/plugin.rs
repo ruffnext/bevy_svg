@@ -151,7 +151,7 @@ fn svg_mesh_linker(
                         });
                 }
             }
-            AssetEvent::Removed { id } => {
+            AssetEvent::Removed { id } | AssetEvent::Unused { id } => {
                 for (entity, ..) in query.iter_mut().filter(|(_, svg, ..)| svg.id() == *id) {
                     commands.entity(entity).despawn_recursive();
                 }

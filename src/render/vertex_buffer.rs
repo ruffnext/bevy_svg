@@ -3,6 +3,7 @@ use bevy::{
     render::{
         color::Color,
         mesh::{Indices, Mesh},
+        render_asset::RenderAssetUsages,
         render_resource::PrimitiveTopology,
     },
     transform::components::Transform,
@@ -43,10 +44,13 @@ impl Convert<Mesh> for (VertexBuffers, Vec2, Vec2) {
             colors.alloc().init(vert.color);
         }
 
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        let mut mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
-        mesh.set_indices(Some(Indices::U32(buffer.indices)));
+        mesh.insert_indices(Indices::U32(buffer.indices));
 
         mesh
     }
